@@ -7,7 +7,7 @@ from cryptography.fernet import Fernet, InvalidToken
 class PasswordManager:
     def __init__(self, master_password):
         #Initialize the master password for the password manager
-        self.master_password = "CLASSICISAAC" 
+        self.master_password = master_password 
         #Generate the fernet encryption key to encrypt/decrypt the passwords
         self.fernet = self.generate_fernet_key()
     
