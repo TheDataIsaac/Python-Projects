@@ -2,12 +2,15 @@
 import pickle
 from cryptography.fernet import Fernet, InvalidToken
 
+#Master Password is "CLASSICISAAC"
 
 #Define PasswordManager class
 class PasswordManager:
-    def __init__(self, master_password):
+    def __init__(self):
         #Initialize the master password for the password manager
-        self.master_password = master_password 
+        self.master_password = "CLASSICISAAC"
+        #Call login method
+        self.login()
         #Generate the fernet encryption key to encrypt/decrypt the passwords
         self.fernet = self.generate_fernet_key()
     
@@ -25,8 +28,7 @@ class PasswordManager:
         #If the entered password does not match the master password
         if password != self.master_password:
             print("Incorrect password. Access denied.")
-            #Raise an exception to deny access to the password manager
-            raise ValueError("Incorrect password. Access denied.")
+            quit()
     
     #Backend method to manage operations for add, view, change, delete and quit
     def backend(self, operation):
@@ -79,13 +81,13 @@ class PasswordManager:
                     encrypted_data = line.strip()
                     #Decrypt the password using the Fernet encryption key
                     pickled_data = self.fernet.decrypt(encrypted_data)
-                    #Unpickle the decrypted data to get the app name and password
-                    data = pickle.loads(pickled_data)
                 #If the decryption fails, raise an InvalidToken exception     
                 except InvalidToken:
                     raise InvalidToken("InvalidToken: Could not decrypt data with given key")
                 #Append the app name and password to the password list    
                 else:
+                    #Unpickle the decrypted data to get the app name and password
+                    data = pickle.loads(pickled_data)
                     password_list.append(data)
         #Iterate over each app in the password list
         for app in password_list:
@@ -176,8 +178,6 @@ class PasswordManager:
 
     #Method to manage passwords - allows user to add, view, change, or delete passwords
     def managepassword(self):
-        #Call login method
-        self.login()
         #Print menu of available operations
         print("'add' to add new password\n'view' to view existing passwords")
         print("'change' to change existing passwords\n'delete' to delete existing passwords")
@@ -190,5 +190,5 @@ class PasswordManager:
 
 
 
-passwordmanager=PasswordManager("CLASSICISAAC")
+passwordmanager=PasswordManager()
 passwordmanager.managepassword()
