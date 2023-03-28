@@ -10,8 +10,8 @@ class DatabaseConnection:
         #Connect to PostgreSQL database
         conn=psycopg2.connect(
             dbname="test",
-            user="classicisaac",
-            password="thimmy",
+            user=#Put your database username here,
+            password= #Put your database password here,
             host="localhost",
             port="5432"
             )
