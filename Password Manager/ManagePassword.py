@@ -65,7 +65,7 @@ class PasswordManager:
         #Print a message confirming that the password was added successfully
         print(f"Added password for {name}")
     
-    #
+    #Method for retrieving and decrypting password from file for the given app
     def get_password(self, app_name):
         #Initialize an empty list to store password objects
         password_list = []

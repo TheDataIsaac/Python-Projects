@@ -2,12 +2,10 @@
 import pickle
 from cryptography.fernet import Fernet, InvalidToken
 import psycopg2
+from AuthenticationModule import UserAuthenticator
 
-
+#Define a class to handle database connections
 class DatabaseConnection:
-    def __init__(self):
-        pass
-
     def connect_database(self):
         #Connect to PostgreSQL database
         conn=psycopg2.connect(
@@ -26,14 +24,18 @@ class DatabaseConnection:
 
 
 
-
+#Define a class to handle database operations
 class Database:
+    #Define an init method that creates a connection to the database, and creates a table in the database
     def __init__(self):
+        #Instantiate a new instance of the DatabaseConnection class
         self.databaseconnection=DatabaseConnection()
+        #Store the cursor and the connection object as instance variables
         self.cur,self.conn=self.databaseconnection.connect_database()
+        #Create the password_table if it does not already exist
         self.create_table()
 
-
+    #Define a method to create a new table in the database
     def create_table(self):
         #Define the SQL query for creating a new table
         create_table_query="""
@@ -48,66 +50,76 @@ class Database:
         #Commit the changes to the database and close the cursor and connection
         self.conn.commit()
 
-        #Method to check if table exists
-    def check_for_table(self):
-        #Define the name of the table you want to check
-        table_name="password_table"
-        #Execute the query to check if the table exists
-        self.cur.execute("SELECT EXISTS(SELECT * FROM pg_catalog.pg_tables WHERE tablename=%s)",(table_name,))
-        #Fetch the name of the query
-        result=self.cur.fetchone()
-        return result[0]
 
+    #Define a method to retrieve a password for a given username and app
     def retrieve_data(self,username,app):
         try:
+            #SQL query for retrieving the password for  given username and app
             retrieve_query="SELECT password FROM password_manager.password_table WHERE (username,app)=(%s,%s);"
+            #Execute the SQL query with given parameters
             self.cur.execute(retrieve_query,(username,app))
-            #Check if the row exists
-            #return (str(self.cur.fetchone()[0]))
         except(Exception) as error:
+            #Raise an exception idf there was an erroe while fetching data
             raise Exception("Error while fetching data from PostgreSQL") from error
         else:
+            #Fetch the first result of the query
             result=self.cur.fetchone()
-            #print(result)
+            #Check if there was a result
             if result is not None:
+                #Return the password
                 return result[0]
             else:
+                #Print a message indicating that there was no result for the given username and app
                 print(f"{app} password does not exist")
                 quit()
 
+
+    #Method to check if a password exists for a given username and app
+    def check_for_password(self,username,app):
+        try:
+            #Define an SQL query for retrieving data
+            retrieve_query="SELECT password FROM password_manager.password_table WHERE (username,app)=(%s,%s);"
+            #Execute the SQL with the given parameters
+            self.cur.execute(retrieve_query,(username,app))
+        except(Exception) as error:
+            #Raise an error if there was an error while fectching data
+            raise Exception("Error while fetching data from PostgreSQL") from error
+        else:
+            #Fetch the first result of the query
+            result=self.cur.fetchone()
+            #Return a bookean indicating whether there was a result or not
+            return (result is not None)
+
+    #Method to add a new password to the database for a given username and app 
     def add_to_database(self,username,app,encrypted_data):
+        #Define thee SQ for inserting data into the database
         insert_query="INSERT INTO password_manager.password_table(username,app,password) VALUES (%s,%s,%s) ON CONFLICT (username,app) DO UPDATE SET password=EXCLUDED.password;"
+        #Execute the SQL query with given parameters
         self.cur.execute(insert_query,(username,app,encrypted_data)) 
+        #Commit the changes to the database
         self.conn.commit()
 
+    #Method to delete a password from the database for a given username and app
     def delete_from_database(self,username,app):
+        #Definre the SQL query for deleting data from the database
         delete_query="DELETE FROM password_manager.password_table WHERE username=(%s) AND app=(%s)"
+        #Execute the SQL with the given parameters
         self.cur.execute(delete_query,(username,app)) 
+        #Commit the changes to the database
         self.conn.commit()
 
-class UserAuthenticator:
-    def __init__(self):
-        #Initialize the master password for the password manager 
-        self.master_password="CLASSICISAAC"
-        self.login()
 
-    def login(self):
-        #Prompt the user to enter master password
-        password = input("Enter master password: ")
-        #If the entered password does not match the master password
-        if password != self.master_password:
-            print("Incorrect password. Access denied.")
-            quit()
 
 #Define PasswordManager class
 class PasswordManager:
     def __init__(self, username):
+        #Store the username passed to the object
         self.username=username
+        #Instantiate UserAuthenticaotr object object to authenticate user
         self.login=UserAuthenticator()
-        #Call login method
-        self.login
         #Generate the fernet encryption key to encrypt/decrypt the passwords
         self.fernet = self.generate_fernet_key()
+        #Create a database objecct to handle the database operations
         self.database=Database()
     
     #Generate a fernet key
@@ -116,10 +128,7 @@ class PasswordManager:
         my_key = b'l3QlnmJRYceg84ze42mgZVewqfeBk_tkbZpXKSyUY1w='
         #Return the Fernet object initialized with the given key
         return Fernet(my_key)
-   
-    #Authenticate user
 
-    
     #Backend method to manage operations for add, view, change, delete and quit
     def backend(self, operation):
         #Map the user's input to a corresponding funtion
@@ -138,23 +147,39 @@ class PasswordManager:
         else:
             print("Invalid option.")
    
-    #Method to add password to file
+    #Method to add password to database
     def add_password(self):
         #Get the name of the app for which the user wants to add a password
         app_name = input("Enter App name or Web URL: ").strip().capitalize()
+        #Check if the password already exists
+        if self.database.check_for_password(self.username,app_name):
+            #If password exists, prompt the user if they want toc change the password
+            change_prompt=input(f"NOTICE: {app_name} password exists. Do you want to change password?[yes/no]: ").strip().lower()
+            #If the user enters an invalid input, quit the program
+            if change_prompt not in ("yes","no"):
+                print("Invalid input")
+                quit()
+            #If the user does not want to change the password, quit the program
+            elif change_prompt=="no":
+                print("\nYour information is secure. Have a great day")
+                quit()
         #Get the password for the app
-        password = input("Password: ").strip()
-        #Serioalize the data to be stored as a password object
+        password = input("Enter Password: ").strip()         
+        #Serialize the data to be stored as a password object
         pickled_data = pickle.dumps(password)
         #Encrypt the pasword using the Fernet encryption key
         encrypted_data = self.fernet.encrypt(pickled_data)
+        #Add the encrypted password to the database
         self.database.add_to_database(self.username,app_name,encrypted_data)
         #Print a message confirming that the password was added successfully
         print(f"Added password for {app_name}")
 
+    #Method for decrypting encrypted password retrieved from database
     def get_password(self,app_name):
+        #Retrieve the encrypted password from the database for the given app name
         encrypted_data=self.database.retrieve_data(self.username,app_name)
         try:
+            #Convert the encrypted data to bytes
             encrypted_data=bytes.fromhex(encrypted_data[2:])
             #Decrypt the password using the Fernet encryption key
             pickled_data = self.fernet.decrypt(encrypted_data)
@@ -171,7 +196,9 @@ class PasswordManager:
     def view_password(self):
         #Get the app name and capitalize it
         app_name = input("Which password do you want to view? ").strip().capitalize()
+        #Get the decrypted password for the app name using get_password method
         password=self.get_password(app_name)
+        #Print the decrypted password
         print(f"{app_name} Password: {password}")
 
 
@@ -180,13 +207,17 @@ class PasswordManager:
     def change_password(self):
         #Ask user for which app password to change
         app_name = input("Which password do you want to change? ").strip().capitalize()
-        self.database.retrieve_data(self.username,app_name)
+        #Check if the password exists before attempting to change it
+        _=self.database.retrieve_data(self.username,app_name)
+        #Get the new password from the user
         new_password = input("Enter new password: ").strip()
         #Seriaize the data
         pickled_data = pickle.dumps(new_password)
-        #Encrypt the serialized data
+        #Encrypt the serialized data using the Ferne encryption key
         encrypted_data = self.fernet.encrypt(pickled_data)
+        #Update the password in the database with the ew encrypted password
         self.database.add_to_database(self.username,app_name,encrypted_data)
+        #Print a message confirming that the password was updated successfully
         print(f"{app_name} password changed successfully")
 
 
@@ -195,8 +226,11 @@ class PasswordManager:
     def delete_password(self):
         #Ask user for which app password to delete
         app_name = input("Which password do you want to delete? ").strip().capitalize()
-        self.database.retrieve_data(self.username,app_name)
+        #Check if the password exists before attempting to delete it
+        _=self.database.retrieve_data(self.username,app_name)
+        #Delete the passwrd from the database
         self.database.delete_from_database(self.username,app_name)
+        #Print a amessage confirming that the password was deleted successfully
         print(f"{app_name} password deleted successfully")
         
     #Method to manage passwords - allows user to add, view, change, or delete passwords
@@ -209,9 +243,10 @@ class PasswordManager:
         ask_operation = input("Which operation would you like to carry out?: ").lower().strip()
         # Call backend function to perform operation chosen by user
         self.backend(ask_operation)
-        print("Your information is secure. Have a great day")
+        print("\nYour information is secure. Have a great day")
 
 
-
+#Create an instance of the PasswordManager class with username
 passwordmanager=PasswordManager("Classic Isaac")
+#Call the managepassword() to begin the password management program
 passwordmanager.managepassword()

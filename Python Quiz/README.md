@@ -1,6 +1,6 @@
 This Python code is a simple quiz game. The quiz consists of 10 multiple-choice questions related to Python programming language.
 
-USAGE
+### USAGE
 To run the quiz, execute the main() function in the code.
 When the quiz starts, you will be prompted to type START to begin.
 Each question will be displayed one at a time. You will be prompted to answer each question.
@@ -27,5 +27,5 @@ answers: A list containing the answers for the questions in the questions attrib
 How to Modify the Quiz
 To modify the quiz, you can update the questions and their answers in the QuestionAnswer class. You can also change the values of the attributes in the Quiz class to modify the behavior of the quiz, such as the number of questions, the maximum number of wrong trials, etc.
 
-LINCENSE:
+### LINCENSE:
 This code is released under the MIT License. 
