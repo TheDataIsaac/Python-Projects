@@ -12,6 +12,7 @@ Clone the repository to your local machine
 Install the required libraries by running pip install ...
 Open AuthenticationModule.py and set the master_password variable to your desired master password.
 Run Manage-Password-With-database.py to start the password manager.
+
 ### Usage
 Upon running the Manage-Password-With-database.py file, you will be prompted to enter your master password. If the password is correct, you will be logged into the password manager and presented with a menu of options:
 
